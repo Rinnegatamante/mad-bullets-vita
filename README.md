@@ -14,6 +14,13 @@ By doing so, it's basically as if we emulate a minimalist Android environment in
 
 ## Changelog
 
+### v1.1
+
+- Fixed a bug causing options changes to not be kept after app closure.
+- Moved to SceLibc for I/O operations: slightly reduced loading times.
+- Enabled more aggressive optimizations in vitaGL: slightly improves framerate.
+- Added possibility to pause the game with START button.
+
 ### v1.0
 
 - Initial Release.
@@ -67,7 +74,7 @@ Additionally, you'll need these libraries to be compiled as well with `-mfloat-a
 - [vitaGL](https://github.com/Rinnegatamante/vitaGL)
 
   - ````bash
-    make SOFTFP_ABI=1 HAVE_GLSL_SUPPORT=1 NO_DEBUG=1 CIRCULAR_VERTEX_POOL=2 USE_SCRATCH_MEMORY=1 install
+    make SOFTFP_ABI=1 NO_DEBUG=1 INDICES_SPEEDHACK=1 INDICES_DRAW_SPEEDHACK=1 DRAW_SPEEDHACK=1 CIRCULAR_VERTEX_POOL=2 USE_SCRATCH_MEMORY=1 PRIMITIVES_SPEEDHACK=1 HAVE_GLSL_SUPPORT=1 install
     ````
 
 After all these requirements are met, you can compile the loader with the following commands:
