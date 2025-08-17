@@ -1550,6 +1550,8 @@ int check_kubridge(void) {
 enum MethodIDs {
 	UNKNOWN = 0,
 	INIT,
+	CLOUD_SET_VALUE,
+	CLOUD_GET_VALUE
 } MethodIDs;
 
 typedef struct {
@@ -1559,6 +1561,8 @@ typedef struct {
 
 static NameToMethodID name_to_method_ids[] = {
 	{ "<init>", INIT },
+	{ "cloudSetValue", CLOUD_SET_VALUE },
+	{ "cloudGetValue", CLOUD_GET_VALUE },
 };
 
 int GetMethodID(void *env, void *class, const char *name, const char *sig) {
@@ -1583,6 +1587,18 @@ int GetStaticMethodID(void *env, void *class, const char *name, const char *sig)
 }
 
 void CallStaticVoidMethodV(void *env, void *obj, int methodID, uintptr_t *args) {
+	char fname[256];
+	FILE *f;
+	switch (methodID) {
+	case CLOUD_SET_VALUE:
+		sprintf(fname, "ux0:data/bullets/cloud/%s", args[0]);
+		f = sceLibcBridge_fopen(fname, "wb");
+		sceLibcBridge_fwrite(args[1], 1, strlen(args[1]), f);
+		sceLibcBridge_fclose(f);
+		break;
+	default:
+		break;
+	}
 }
 
 int CallStaticBooleanMethodV(void *env, void *obj, int methodID, uintptr_t *args) {
@@ -1704,11 +1720,22 @@ void GetStringUTFRegion(void *env, char *str, size_t start, size_t len, char *bu
 	buf[len] = 0;
 }
 
+char cloud_ret[1024];
 void *CallStaticObjectMethodV(void *env, void *obj, int methodID, uintptr_t *args) {
+	char fname[256];
 	FILE *f;
-	char *read_buf = NULL;
-	size_t sz;
 	switch (methodID) {
+	case CLOUD_GET_VALUE:
+		dlog("cloudGetValue %s\n", args[0]);
+		sprintf(fname, "ux0:data/bullets/cloud/%s", args[0]);
+		f = sceLibcBridge_fopen(fname, "rb");
+		if (f) {
+			sceClibMemset(cloud_ret, 0, 1024);
+			sceLibcBridge_fread(cloud_ret, 1, 1024, f);
+			sceLibcBridge_fclose(f);
+			return cloud_ret;
+		}
+		return NULL;
 	default:
 		return NULL;
 	}
@@ -1978,6 +2005,8 @@ void *pthread_main(void *arg) {
 	int (* nativeRender) () = (void *)so_symbol(&main_mod, "Java_com_istomgames_engine_GameRenderer_nativeRender");
 	int (* nativeResize) (void *env, void *obj, int w, int h) = (void *)so_symbol(&main_mod, "Java_com_istomgames_engine_GameRenderer_nativeResize");
 	int (* nativeTouch) (void *env, void *obj, int id, int action, float x, float y, int zero) = (void *)so_symbol(&main_mod, "Java_com_istomgames_engine_GameSurfaceView_nativeTouch");
+
+	sceIoMkdir("ux0:data/bullets/cloud", 0777);
 
 	sceClibPrintf("JNI_OnLoad\n");
 	JNI_OnLoad(fake_vm);
