@@ -2022,6 +2022,17 @@ void *pthread_main(void *arg) {
 	
 	sceClibPrintf("Entering main loop\n");
 	
+	#define fakePhysicalButton(btn, x, y, id) \
+		if ((pad.buttons & btn) == btn) { \
+			if ((oldpad & btn) == btn) { \
+				nativeTouch(fake_env, NULL, id, MT_ACTION_MOVE, x, y, 0); \
+			} else { \
+				nativeTouch(fake_env, NULL, id, MT_ACTION_DOWN, x, y, 0); \
+			} \
+		} else if ((oldpad & btn) == btn) { \
+			nativeTouch(fake_env, NULL, id, MT_ACTION_UP, x, y, 0); \
+		}
+	
 	int lastX[SCE_TOUCH_MAX_REPORT] = {-1, -1, -1, -1, -1, -1, -1, -1};
 	int lastY[SCE_TOUCH_MAX_REPORT] = {-1, -1, -1, -1, -1, -1, -1, -1};
 	for (;;) {
@@ -2045,7 +2056,13 @@ void *pthread_main(void *arg) {
 				lastY[i] = -1;
 			}
 		}
-		
+
+		static uint32_t oldpad = 0;
+		SceCtrlData pad;
+		sceCtrlPeekBufferPositive(0, &pad, 1);
+		fakePhysicalButton(SCE_CTRL_START, 898.0f, 54.0f, 0)
+		oldpad = pad.buttons;
+
 		nativeRender();
 		vglSwapBuffers(GL_FALSE);
 	}
