@@ -49,6 +49,8 @@
 
 #include "vorbis/vorbisfile.h"
 
+#include "libc_bridge.h"
+
 //#define ENABLE_DEBUG
 
 #ifdef ENABLE_DEBUG
@@ -74,6 +76,7 @@ int file_exists(const char *path) {
 }
 
 int _newlib_heap_size_user = 160 * 1024 * 1024;
+unsigned int sceLibcHeapSize = 4 * 1024 * 1024;
 
 so_module main_mod;
 
@@ -479,9 +482,9 @@ FILE *fopen_hook(char *fname, char *mode) {
 	if (strncmp(fname, "ux0:", 4)) {
 		sprintf(real_fname, "ux0:data/bullets/%s", fname);
 		dlog("fopen(%s,%s) patched\n", real_fname, mode);
-		f = fopen(real_fname, mode);
+		f = sceLibcBridge_fopen(real_fname, mode);
 	} else {
-		f = fopen(fname, mode);
+		f = sceLibcBridge_fopen(fname, mode);
 	}
 	return f;
 }
@@ -805,28 +808,28 @@ FILE *AAssetManager_open(void *mgr, const char *fname, int mode) {
 	char full_fname[256];
 	sprintf(full_fname, "ux0:data/bullets/%s", fname);
 	dlog("AAssetManager_open %s\n", full_fname);
-	return fopen(full_fname, "rb");
+	return sceLibcBridge_fopen(full_fname, "rb");
 }
 
 int AAsset_close(FILE *f) {
-	return fclose(f);
+	return sceLibcBridge_fclose(f);
 }
 
 size_t AAsset_getLength(FILE *f) {
-	size_t p = ftell(f);
-	fseek(f, 0, SEEK_END);
-	size_t res = ftell(f);
-	fseek(f, p, SEEK_SET);
+	size_t p = sceLibcBridge_ftell(f);
+	sceLibcBridge_fseek(f, 0, SEEK_END);
+	size_t res = sceLibcBridge_ftell(f);
+	sceLibcBridge_fseek(f, p, SEEK_SET);
 	return res;
 }
 
 size_t AAsset_read(FILE *f, void *buf, size_t count) {
-	return fread(buf, 1, count, f);
+	return sceLibcBridge_fread(buf, 1, count, f);
 }
 
 size_t AAsset_seek(FILE *f, size_t offs, int whence) {
-	fseek(f, offs, whence);
-	return ftell(f);
+	sceLibcBridge_fseek(f, offs, whence);
+	return sceLibcBridge_ftell(f);
 }
 
 int rmdir_hook(const char *pathname) {
@@ -1036,6 +1039,14 @@ int __vsnprintf_chk(char *s, size_t maxlen, int flag, size_t slen, const char *f
 
 void *malloc_hook(size_t sz) {
 	return memalign(16, sz);
+}
+
+int sceLibcBridge_fseeko(FILE *stream, off_t offset, int origin) {
+	return sceLibcBridge_fseek(stream, offset, origin);
+}
+
+off_t sceLibcBridge_ftello(FILE *stream) {
+	return sceLibcBridge_ftell(stream);
 }
 
 static so_default_dynlib default_dynlib[] = {
@@ -1268,15 +1279,15 @@ static so_default_dynlib default_dynlib[] = {
 	{ "exp2", (uintptr_t)&exp2 },
 	{ "expf", (uintptr_t)&expf },
 	{ "fabsf", (uintptr_t)&fabsf },
-	{ "fclose", (uintptr_t)&fclose },
+	{ "fclose", (uintptr_t)&sceLibcBridge_fclose },
 	{ "fcntl", (uintptr_t)&ret0 },
 	{ "mktime", (uintptr_t)&mktime },
 	// { "fdopen", (uintptr_t)&fdopen },
-	{ "feof", (uintptr_t)&feof },
-	{ "ferror", (uintptr_t)&ferror },
+	{ "feof", (uintptr_t)&sceLibcBridge_feof },
+	{ "ferror", (uintptr_t)&sceLibcBridge_ferror },
 	{ "fflush", (uintptr_t)&ret0 },
-	{ "fgetc", (uintptr_t)&fgetc },
-	{ "fgets", (uintptr_t)&fgets },
+	{ "fgetc", (uintptr_t)&sceLibcBridge_fgetc },
+	{ "fgets", (uintptr_t)&sceLibcBridge_fgets },
 	{ "floor", (uintptr_t)&floor },
 	{ "fileno", (uintptr_t)&fileno },
 	{ "floorf", (uintptr_t)&floorf },
@@ -1285,23 +1296,23 @@ static so_default_dynlib default_dynlib[] = {
 	{ "funopen", (uintptr_t)&funopen },
 	{ "fopen", (uintptr_t)&fopen_hook },
 	{ "open", (uintptr_t)&open_hook },
-	{ "fprintf", (uintptr_t)&fprintf },
-	{ "fputc", (uintptr_t)&ret0 },
+	{ "fprintf", (uintptr_t)&sceLibcBridge_fprintf },
+	{ "fputc", (uintptr_t)&sceLibcBridge_fputc },
 	// { "fputwc", (uintptr_t)&fputwc },
-	{ "fputs", (uintptr_t)&ret0 },
-	{ "fread", (uintptr_t)&fread },
+	{ "fputs", (uintptr_t)&sceLibcBridge_fputs },
+	{ "fread", (uintptr_t)&sceLibcBridge_fread },
 	{ "free", (uintptr_t)&free },
 	{ "frexp", (uintptr_t)&frexp },
 	{ "frexpf", (uintptr_t)&frexpf },
 	{ "fscanf", (uintptr_t)&fscanf },
-	{ "fseek", (uintptr_t)&fseek },
-	{ "fseeko", (uintptr_t)&fseeko },
-	{ "fstat", (uintptr_t)&fstat_hook },
-	{ "ftell", (uintptr_t)&ftell },
-	{ "ftello", (uintptr_t)&ftello },
+	{ "fseek", (uintptr_t)&sceLibcBridge_fseek },
+	{ "fseeko", (uintptr_t)&sceLibcBridge_fseeko },
+	// { "fstat", (uintptr_t)&fstat_hook },
+	{ "ftell", (uintptr_t)&sceLibcBridge_ftell },
+	{ "ftello", (uintptr_t)&sceLibcBridge_ftello },
 	// { "ftruncate", (uintptr_t)&ftruncate },
-	{ "fwrite", (uintptr_t)&fwrite },
-	{ "getc", (uintptr_t)&getc },
+	{ "fwrite", (uintptr_t)&sceLibcBridge_fwrite },
+	{ "getc", (uintptr_t)&sceLibcBridge_getc },
 	{ "gettid", (uintptr_t)&ret0 },
 	{ "getpid", (uintptr_t)&ret0 },
 	{ "getcwd", (uintptr_t)&getcwd_hook },
@@ -1974,11 +1985,11 @@ void *pthread_main(void *arg) {
 	sceClibPrintf("nativeInit\n");
 	nativeInit(fake_env, NULL, "ux0:data/bullets", "ux0:data/bullets", "ux0:data/bullets", (void *)1);
 	
+	sceClibPrintf("nativeResize\n");
+	nativeResize(fake_env, NULL, SCREEN_H, SCREEN_W);	
+	
 	sceClibPrintf("nativeStart\n");
 	nativeStart();
-	
-	sceClibPrintf("nativeResize\n");
-	nativeResize(fake_env, NULL, SCREEN_H, SCREEN_W);
 	
 	sceClibPrintf("Entering main loop\n");
 	
