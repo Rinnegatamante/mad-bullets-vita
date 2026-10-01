@@ -1593,7 +1593,7 @@ void CallStaticVoidMethodV(void *env, void *obj, int methodID, uintptr_t *args) 
 	case CLOUD_SET_VALUE:
 		sprintf(fname, "ux0:data/bullets/cloud/%s", args[0]);
 		f = sceLibcBridge_fopen(fname, "wb");
-		sceLibcBridge_fwrite(args[1], 1, strlen(args[1]), f);
+		sceLibcBridge_fwrite((const char *)args[1], 1, strlen((const char *)args[1]), f);
 		sceLibcBridge_fclose(f);
 		break;
 	default:
@@ -1686,7 +1686,7 @@ void *CallObjectMethodV(void *env, void *obj, int methodID, uintptr_t *args) {
 	int lang = -1;
 	switch (methodID) {
 	default:
-		return 0x34343434;
+		return (void *)(uintptr_t)0x34343434;
 	}
 }
 
